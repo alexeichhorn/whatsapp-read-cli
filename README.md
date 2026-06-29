@@ -2,7 +2,9 @@
 
 Read-only Rust CLI for browsing local macOS WhatsApp data. It never talks to WhatsApp servers.
 
-The default WhatsApp data root is auto-detected at:
+It only supports the native macOS WhatsApp desktop app. It does not read WhatsApp Web data from Chrome, Safari, or any browser profile.
+
+The default WhatsApp desktop app data root is auto-detected at:
 
 ```text
 ~/Library/Group Containers/group.net.whatsapp.WhatsApp.shared
@@ -217,3 +219,10 @@ Statements containing another semicolon or not starting with `SELECT` are reject
 - raw SQL exists only under `debug query`
 - raw SQL only accepts one `SELECT`
 - debug table/schema identifiers reject unsafe characters
+
+## Unsupported
+
+- WhatsApp Web in Chrome/Safari/other browsers
+- live browser sessions
+- QR login/session extraction
+- sending, editing, deleting, or marking messages read
