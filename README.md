@@ -10,19 +10,36 @@ The default WhatsApp data root is auto-detected at:
 
 All SQLite databases are opened with `mode=ro&immutable=1` and `PRAGMA query_only = ON`. Debug SQL only accepts a single `SELECT` statement.
 
-## Build
+## Install
 
 ```sh
-cargo build
+cargo install --path . --locked
 ```
 
-Run from the repo:
+This builds an optimized release binary and installs it into Cargo's bin directory, usually:
 
 ```sh
-target/debug/whatsapp-read-cli info
+~/.cargo/bin/whatsapp-read-cli
 ```
 
-Or install/copy the binary and run `whatsapp-read-cli ...`.
+Then run it from anywhere:
+
+```sh
+whatsapp-read-cli info
+```
+
+If your shell cannot find it, add Cargo's bin directory to your `PATH`:
+
+```sh
+echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+To build a release binary without installing:
+
+```sh
+cargo build --release
+```
 
 ## Global Options
 
