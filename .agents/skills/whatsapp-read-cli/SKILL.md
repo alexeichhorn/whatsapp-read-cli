@@ -5,7 +5,7 @@ description: "Use when an agent needs to answer questions by reading a user's lo
 
 # WhatsApp Read CLI
 
-Use `whatsapp-read-cli` as a read-only local data source for WhatsApp on macOS. Treat it like a user-data tool: run the smallest command that answers the question, summarize results, and avoid dumping private content unless the user asks for raw output.
+Use `whatsapp-read-cli` as a read-only local data source for WhatsApp on macOS.
 
 ## Safety Rules
 
@@ -14,7 +14,7 @@ Use `whatsapp-read-cli` as a read-only local data source for WhatsApp on macOS. 
 - Prefer normal commands over `debug`.
 - Use `debug query` only when normal commands cannot answer the question.
 - If using `debug query`, run only a single `SELECT`; never attempt write SQL.
-- Do not paste large private message dumps into the final answer. Summarize and cite counts/snippets only as needed.
+- Avoid unnecessary large message dumps.
 
 ## Setup Check
 
