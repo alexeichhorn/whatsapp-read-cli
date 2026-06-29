@@ -61,10 +61,11 @@ List chats.
 ```sh
 whatsapp-read-cli chats
 whatsapp-read-cli chats --limit 200
+whatsapp-read-cli chats --limit 50 --offset 50
 whatsapp-read-cli chats --unread
 ```
 
-Use `--limit 0` to print all rows.
+Use `--limit 0` to print all rows. Use `--offset` to skip rows, for example `--limit 50 --offset 50` for the second page.
 
 ### `messages`
 
@@ -74,6 +75,7 @@ List messages for one chat. `--chat` is required.
 whatsapp-read-cli messages --chat 123
 whatsapp-read-cli messages --chat "Alice"
 whatsapp-read-cli messages --chat "49123456789" --limit 500
+whatsapp-read-cli messages --chat 123 --limit 50 --offset 50
 whatsapp-read-cli messages --chat 123 --unread
 ```
 
@@ -94,6 +96,7 @@ List contacts.
 
 ```sh
 whatsapp-read-cli contacts
+whatsapp-read-cli contacts --limit 100 --offset 100
 whatsapp-read-cli contacts --limit 0
 ```
 
@@ -103,6 +106,7 @@ List call history.
 
 ```sh
 whatsapp-read-cli calls
+whatsapp-read-cli calls --limit 100 --offset 100
 whatsapp-read-cli calls --limit 0
 ```
 
@@ -113,6 +117,7 @@ Search message text globally, or within one chat.
 ```sh
 whatsapp-read-cli search "invoice"
 whatsapp-read-cli search "invoice" --chat 123
+whatsapp-read-cli search "invoice" --limit 50 --offset 50
 whatsapp-read-cli search "invoice" --format json
 ```
 

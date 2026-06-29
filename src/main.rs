@@ -38,6 +38,8 @@ enum Command {
         unread: bool,
         #[arg(long, default_value_t = 50)]
         limit: usize,
+        #[arg(long, default_value_t = 0)]
+        offset: usize,
     },
     /// List messages in one chat.
     Messages {
@@ -48,16 +50,22 @@ enum Command {
         unread: bool,
         #[arg(long, default_value_t = 100)]
         limit: usize,
+        #[arg(long, default_value_t = 0)]
+        offset: usize,
     },
     /// List contacts.
     Contacts {
         #[arg(long, default_value_t = 100)]
         limit: usize,
+        #[arg(long, default_value_t = 0)]
+        offset: usize,
     },
     /// List calls.
     Calls {
         #[arg(long, default_value_t = 100)]
         limit: usize,
+        #[arg(long, default_value_t = 0)]
+        offset: usize,
     },
     /// Search message text globally or within one chat.
     Search {
@@ -66,6 +74,8 @@ enum Command {
         chat: Option<String>,
         #[arg(long, default_value_t = 100)]
         limit: usize,
+        #[arg(long, default_value_t = 0)]
+        offset: usize,
     },
     /// Read-only database inspection escape hatches.
     Debug {
@@ -120,15 +130,25 @@ fn run() -> Result<(), Box<dyn Error>> {
     let root = cli.root.unwrap_or(default_root()?);
     let rows = match cli.command {
         Command::Info => info(&root)?,
-        Command::Chats { unread, limit } => chats(&root, unread, limit)?,
+        Command::Chats {
+            unread,
+            limit,
+            offset,
+        } => chats(&root, unread, limit, offset)?,
         Command::Messages {
             chat,
             unread,
             limit,
-        } => messages(&root, &chat, unread, limit)?,
-        Command::Contacts { limit } => contacts(&root, limit)?,
-        Command::Calls { limit } => calls(&root, limit)?,
-        Command::Search { text, chat, limit } => search(&root, &text, chat.as_deref(), limit)?,
+            offset,
+        } => messages(&root, &chat, unread, limit, offset)?,
+        Command::Contacts { limit, offset } => contacts(&root, limit, offset)?,
+        Command::Calls { limit, offset } => calls(&root, limit, offset)?,
+        Command::Search {
+            text,
+            chat,
+            limit,
+            offset,
+        } => search(&root, &text, chat.as_deref(), limit, offset)?,
         Command::Debug { command } => debug(&root, command)?,
     };
 
@@ -219,7 +239,7 @@ fn info(root: &Path) -> Result<RowSet, Box<dyn Error>> {
     })
 }
 
-fn chats(root: &Path, unread: bool, limit: usize) -> Result<RowSet, Box<dyn Error>> {
+fn chats(root: &Path, unread: bool, limit: usize, offset: usize) -> Result<RowSet, Box<dyn Error>> {
     let conn = open_db(&resolve_db(root, "chat")?)?;
     let unread_filter = if unread {
         "AND ifnull(ZUNREADCOUNT, 0) > 0"
@@ -238,14 +258,20 @@ fn chats(root: &Path, unread: bool, limit: usize) -> Result<RowSet, Box<dyn Erro
         FROM ZWACHATSESSION
         WHERE ifnull(ZREMOVED, 0) = 0 {unread_filter}
         ORDER BY ZLASTMESSAGEDATE DESC
-        {limit_clause}",
-        limit_clause = limit_clause(limit),
+        {page_clause}",
+        page_clause = page_clause(limit, offset),
     );
 
     query_rows(&conn, &sql, &[])
 }
 
-fn messages(root: &Path, chat: &str, unread: bool, limit: usize) -> Result<RowSet, Box<dyn Error>> {
+fn messages(
+    root: &Path,
+    chat: &str,
+    unread: bool,
+    limit: usize,
+    offset: usize,
+) -> Result<RowSet, Box<dyn Error>> {
     let conn = open_db(&resolve_db(root, "chat")?)?;
     let chat_id = resolve_chat(&conn, chat)?;
     let mut filters = vec!["m.ZCHATSESSION = ?".to_string()];
@@ -277,9 +303,9 @@ fn messages(root: &Path, chat: &str, unread: bool, limit: usize) -> Result<RowSe
         FROM ZWAMESSAGE m
         WHERE {where_clause}
         ORDER BY m.ZMESSAGEDATE DESC
-        {limit_clause}",
+        {page_clause}",
         where_clause = filters.join(" AND "),
-        limit_clause = limit_clause(limit),
+        page_clause = page_clause(limit, offset),
     );
     let params = to_params(&params);
     query_rows(&conn, &sql, &params)
@@ -300,7 +326,7 @@ fn message_headers() -> RowSet {
     }
 }
 
-fn contacts(root: &Path, limit: usize) -> Result<RowSet, Box<dyn Error>> {
+fn contacts(root: &Path, limit: usize, offset: usize) -> Result<RowSet, Box<dyn Error>> {
     let conn = open_db(&resolve_db(root, "contacts")?)?;
     let sql = format!(
         "SELECT
@@ -313,14 +339,14 @@ fn contacts(root: &Path, limit: usize) -> Result<RowSet, Box<dyn Error>> {
             ZABOUTTEXT AS about
         FROM ZWAADDRESSBOOKCONTACT
         ORDER BY ZSORT ASC
-        {limit_clause}",
-        limit_clause = limit_clause(limit),
+        {page_clause}",
+        page_clause = page_clause(limit, offset),
     );
 
     query_rows(&conn, &sql, &[])
 }
 
-fn calls(root: &Path, limit: usize) -> Result<RowSet, Box<dyn Error>> {
+fn calls(root: &Path, limit: usize, offset: usize) -> Result<RowSet, Box<dyn Error>> {
     let conn = open_db(&resolve_db(root, "calls")?)?;
     let sql = format!(
         "SELECT
@@ -332,8 +358,8 @@ fn calls(root: &Path, limit: usize) -> Result<RowSet, Box<dyn Error>> {
             ZGROUPCALLCREATORUSERJIDSTRING AS creator_jid
         FROM ZWACDCALLEVENT
         ORDER BY ZDATE DESC
-        {limit_clause}",
-        limit_clause = limit_clause(limit),
+        {page_clause}",
+        page_clause = page_clause(limit, offset),
     );
 
     query_rows(&conn, &sql, &[])
@@ -344,6 +370,7 @@ fn search(
     text: &str,
     chat: Option<&str>,
     limit: usize,
+    offset: usize,
 ) -> Result<RowSet, Box<dyn Error>> {
     let conn = open_db(&resolve_db(root, "chat")?)?;
     let mut filters = vec!["m.ZTEXT LIKE ?".to_string()];
@@ -367,9 +394,9 @@ fn search(
         LEFT JOIN ZWACHATSESSION c ON c.Z_PK = m.ZCHATSESSION
         WHERE {where_clause}
         ORDER BY m.ZMESSAGEDATE DESC
-        {limit_clause}",
+        {page_clause}",
         where_clause = filters.join(" AND "),
-        limit_clause = limit_clause(limit),
+        page_clause = page_clause(limit, offset),
     );
     let params = to_params(&params);
     query_rows(&conn, &sql, &params)
@@ -555,11 +582,12 @@ fn ensure_identifier(identifier: &str) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn limit_clause(limit: usize) -> String {
-    if limit == 0 {
-        String::new()
-    } else {
-        format!("LIMIT {limit}")
+fn page_clause(limit: usize, offset: usize) -> String {
+    match (limit, offset) {
+        (0, 0) => String::new(),
+        (0, offset) => format!("LIMIT -1 OFFSET {offset}"),
+        (limit, 0) => format!("LIMIT {limit}"),
+        (limit, offset) => format!("LIMIT {limit} OFFSET {offset}"),
     }
 }
 
@@ -725,7 +753,7 @@ fn sqlite_uri_path(path: &Path) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{json_escape, readonly_select};
+    use super::{json_escape, page_clause, readonly_select};
 
     #[test]
     fn raw_query_only_accepts_single_select() {
@@ -738,5 +766,13 @@ mod tests {
     #[test]
     fn json_strings_are_escaped() {
         assert_eq!(json_escape("a\"b\\c"), "a\\\"b\\\\c");
+    }
+
+    #[test]
+    fn page_clause_supports_all_rows_after_offset() {
+        assert_eq!(page_clause(0, 0), "");
+        assert_eq!(page_clause(50, 0), "LIMIT 50");
+        assert_eq!(page_clause(50, 100), "LIMIT 50 OFFSET 100");
+        assert_eq!(page_clause(0, 100), "LIMIT -1 OFFSET 100");
     }
 }
