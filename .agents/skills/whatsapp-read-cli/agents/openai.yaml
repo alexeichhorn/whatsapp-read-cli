@@ -1,0 +1,4 @@
+interface:
+  display_name: "WhatsApp Read CLI"
+  short_description: "Use local WhatsApp data read-only"
+  default_prompt: "Use $whatsapp-read-cli to answer a question from local WhatsApp data."

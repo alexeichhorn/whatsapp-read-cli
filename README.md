@@ -41,6 +41,21 @@ To build a release binary without installing:
 cargo build --release
 ```
 
+## Agent Skill
+
+This repo includes an agent-facing skill for using this CLI safely:
+
+```text
+.agents/skills/whatsapp-read-cli
+```
+
+From a checkout of this repo, install it into Codex with:
+
+```sh
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+cp -R .agents/skills/whatsapp-read-cli "${CODEX_HOME:-$HOME/.codex}/skills/"
+```
+
 ## Global Options
 
 ```sh
